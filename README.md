@@ -1,9 +1,9 @@
 # MOCHA: Multimodal Object-driven Cross-arcHitecture Alignment ☕
 
-*Elena Camuffo $^{1,2}$, Francesco Barbato $^{1,2}$, Mete Ozay $^1$, Simone Milani $^2$, Umberto Michieli $^1$*
+Elena Camuffo $^{1,2}$, Francesco Barbato $^{1,2}$, Mete Ozay $^1$, Simone Milani $^2$, Umberto Michieli $^1$
 
-$^1$ Samsung R&D Institute UK, United Kingdom 🇬🇧 ;
-$^2$ University of Padova, Italy 🇮🇹
+$^1$ Samsung R&D Institute UK, United Kingdom;
+$^2$ University of Padova, Italy
 
 [![View on arXiv](https://img.shields.io/badge/arXiv-View%20Paper-red)](https://arxiv.org/)
 
