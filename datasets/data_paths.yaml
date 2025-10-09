@@ -1,0 +1,6 @@
+coco: data/COCO
+core50: data/CORe50
+icubworld: data/iCubWorld
+openimages: data/OpenImages
+perseg: data/PerSeg
+pod: data/POD
