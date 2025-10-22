@@ -5,7 +5,7 @@ Elena Camuffo $^{1,2}$, Francesco Barbato $^{1,2}$, Mete Ozay $^1$, Simone Milan
 $^1$ Samsung R&D Institute UK, United Kingdom;
 $^2$ University of Padova, Italy
 
-[![View on arXiv](https://img.shields.io/badge/arXiv-View%20Paper-red)](https://arxiv.org/)
+[![View on arXiv](https://img.shields.io/badge/arXiv-View%20Paper-red)](https://arxiv.org/pdf/2509.14001)
 
 ![mocha](image-2.png)
 MOCHA recipe. (1) Pretraining student model. (2) Knowledge distillation on rich joint visual and textual features from a frozen teacher. (3) Few-shot personalization with frozen student and prototypical learner.
@@ -68,7 +68,7 @@ Note that, to align with previous work, we employ a subset of the OpenImages whi
 To compute the Text-Vision embeddings you need to merge them:
 
 ```bash
-python merge_embeddings.py
+python merge_embeddings_oi.py
 ```
 
 To initialize the PCA on the OpenImages embeddings merged, and store:
