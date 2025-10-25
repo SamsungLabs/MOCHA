@@ -84,7 +84,7 @@ If needed you can repeat the previous steps and use the `fs` version to compute 
 To train the MOCHA architecture you can run the following command:
 
 ```bash
-torchrun --nproc_per_node=1 both_pretrain.py --pca_dim 512 --epochs 50
+torchrun --nproc_per_node=1 distillation.py --pca_dim 512 --epochs 50
 ```
 
 By default the code will initialize the YOLOv8 architecture on COCO (`--init_ckpt=none`).
