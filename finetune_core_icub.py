@@ -17,11 +17,17 @@ from models import YoloFeats
 from utils import clean_predictions, Metrics
 
 def set_seed(seed):
+    """
+        sets the rng seeds for all libraries
+    """
     torch.manual_seed(seed)
     npr.seed(seed)
     random.seed(seed)
 
 def str2bool(s):
+    """
+        string to bool
+    """
     s = s.lower()
     if s in ['1', 't', 'true']:
         return True
@@ -30,7 +36,9 @@ def str2bool(s):
     raise ValueError(f"[{s}] cannot be parsed as boolean")
 
 def init_loaders_and_models(rank, world_size, args):
-    
+    """
+        initialize stuff here, to reduce SAM cost
+    """
     if args.dataset == "icub":
         tset = iCubWorldDataset(imgsz=672)
         vset = iCubWorldDataset(imgsz=672, augment=False)
@@ -82,7 +90,9 @@ def init_loaders_and_models(rank, world_size, args):
     return vset, tloader, vloader, yolo, ema_dict
 
 def init_losses_and_optim(args, yolo, tloader):
-    
+    """
+        init stuff here, to reduce SAM cost
+    """
     det = yolo.module.init_criterion()
 
     param_groups = [
@@ -98,7 +108,9 @@ def init_losses_and_optim(args, yolo, tloader):
     return det, optim, scheduler
 
 def train_log(writer, l, it, optim, yo, box, cls, dfl):
-    
+    """
+        log stuff here to reduce sam cost
+    """
     writer.add_scalar('train/ltot', l.item(), it)
     writer.add_scalar('train/lr/yolo', optim.param_groups[0]['lr'], it)
     writer.add_scalar('train/wd/yolo', optim.param_groups[0]['weight_decay'], it)
@@ -110,7 +122,9 @@ def train_log(writer, l, it, optim, yo, box, cls, dfl):
     writer.add_scalar('train/yolo/dfl', dfl.item(), it)
 
 def update_ema(it, args, yolo, ema_dict):
-    
+    """
+        ema
+    """
     # ema step and reset yolo
     if it % args.ema_step == 0:
         sdict = dict(yolo.state_dict()) # silence error again
@@ -120,11 +134,17 @@ def update_ema(it, args, yolo, ema_dict):
     return yolo, ema_dict
 
 def set_wd(optim, args):
+    """
+        set weight decay based on learning rate
+    """
     for pg in optim.param_groups:
         if pg['weight_decay'] > 0:
             pg['weight_decay'] = args.wd * pg['lr']/args.lr
 
 def train_epoch(tloader, e, args, rank, optim, yolo, det, scheduler, ema_dict, writer, it):
+    """
+        do stuff here to reduce SAM cost
+    """
     # set the current epoch, otherwise same order will be used each time
     tloader.sampler.set_epoch(e)
     for _, sample in enumerate(tqdm(tloader, desc='Training Epoch \
@@ -154,6 +174,9 @@ def train_epoch(tloader, e, args, rank, optim, yolo, det, scheduler, ema_dict, w
     return it
 
 def eval_epoch(yolo, args, vset, vloader, e, rank, det, writer):
+    """
+        do stuff here to reduce SAM cost
+    """
     torch.save(yolo.state_dict(), args.logdir+'/yolo_latest.pth')
 
     metrics = Metrics(vset.names, conf=0.001)
@@ -194,6 +217,10 @@ def eval_epoch(yolo, args, vset, vloader, e, rank, det, writer):
     return map50_95
 
 def main(rank, world_size, args):
+    """
+        main function, as required by DDP
+    """
+
     dist_url = "env://"
 
     # select the correct cuda device

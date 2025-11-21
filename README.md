@@ -62,22 +62,29 @@ Put the script `OI_subset.py` in `data/openimages/OpenImages` in such a way that
 ## How to make MOCHA ☕️ 🥐
 
 ### 1) Getting Started
-When running the code for the fist time on the OpenImages dataset using LLaVa or CLIP as teacher the code will generate the appropriate cache files for them.
-Note that, to align with previous work, we employ a subset of the OpenImages which can be extracted by running the `OI_subset.py` script.
+When running the code for the first time on the OpenImages dataset using LLaVa or CLIP as the teacher model, the necessary cache files will be automatically generated. 
+To ensure consistency with prior work, we use a subset of the OpenImages dataset. This subset can be extracted by executing the `OI_subset.py` script.
 
-To compute the Text-Vision embeddings you need to merge them:
+#### 1b) [OPTIONAL] Compute PCA
+
+After caching separately llava and clip features, these can be merged and compressed via PCA, as follows.
+
+To cache the Text-Vision embeddings:
 
 ```bash
-python merge_embeddings_oi.py
+python caching_oi.py
 ```
 
-To initialize the PCA on the OpenImages embeddings merged, and store:
+To compute the PCA on the merged OpenImages embeddings:
 
 ```bash
 python intitialize_pca_oi.py
 ```
 
-If needed you can repeat the previous steps and use the `fs` version to compute the PCA on few-shot datasets.
+If needed you can repeat the previous steps and use the `fs` version to compute the PCA on few-shot datasets, specifying the dataset.
+
+Note that you can skip this step by downloading the already computed PCA on OpenImages from [here](https://drive.google.com/file/d/1g58jzC1CJu_BrWscCHOqGKrkalAQcrYP/view?usp=share_link) and store it in `ckpts/pca_oi.npz`.
+The checkpoints `ckpts/auxft.pth`, `ckpts/base.pth` belong to the original repo of AuXFT [here](https://github.com/SamsungLabs/AuXFT) and can also be downloaded.
 
 
 ### 2) Feature Distillation
@@ -89,20 +96,13 @@ torchrun --nproc_per_node=1 distillation.py --pca_dim 512 --epochs 50
 
 By default the code will initialize the YOLOv8 architecture on COCO (`--init_ckpt=none`).
 You can set `--init_ckpt=ckpts/auxft.pth` and `--epochs=20` to train the MOCHA (AuXFT) variant.
-Please find more details about AuXFT [here](https://github.com/SamsungLabs/AuXFT).
 
 ### 3) Few-Shot Personalization
 
-To test baselines:
+To evaluate MOCHA:
 
 ```bash
-python train_protonet.py --model llava-clip --pca_path ckpts/pca_oi.npz --dataset perseg --pca_dim 256
-```
-
-To evaluate on MOCHA baselines:
-
-```bash
-python train_protonet.py --model mocha --pca_dim 512 --dataset perseg --ckpt "ckpts/mocha.pth"
+python train_protonet.py --model mocha --pca_dim 512 --pca_path ckpts/pca_oi.npz --dataset perseg --ckpt ckpts/mocha.pth
 ```
 
 Note that, similarly to AuXFT, before evaluating on the CORe50 and iCubWorld dataset you should generate finetuned checkpoints by running the `finetune_core_icub.py` script.
