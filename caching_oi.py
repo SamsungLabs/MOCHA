@@ -6,10 +6,10 @@ import numpy as np
 from numpy import random as npr
 
 import torch
-from torch.utils.data import DataLoader, DistributedSampler
+from torch.utils.data import DataLoader
 
-from datasets import OpenImages
-from models import YoloFeats, LlavaClipVecs
+from datasets import OpenImages  # Assuming this is a custom dataset
+from models import YoloFeats, LlavaClipVecs  # Assuming these are custom models
 
 def set_seed(seed):
     """
@@ -30,30 +30,20 @@ def str2bool(s):
         return False
     raise ValueError(f"[{s}] cannot be parsed as boolean")
 
-def init_loaders_and_models(rank, world_size, args):
+def init_loaders_and_models(args):
     """
         initialize stuff here, to reduce SAM cost
     """
     tset = OpenImages(imgsz=672, augment=False)
     vset = OpenImages(imgsz=672, val=True)
 
-    if not args.disable_distributed:
-        tsampler = DistributedSampler(tset, num_replicas=world_size, rank=rank, shuffle=True)
-        tloader = DataLoader(tset,
-                             args.batch_per_gpu,
-                             num_workers=16,
-                             pin_memory=True,
-                             drop_last=True,
-                             sampler=tsampler,
-                             collate_fn=tset.collate_fn)
-    else:
-        tloader = DataLoader(tset,
-                             args.batch_per_gpu,
-                             num_workers=16,
-                             pin_memory=True,
-                             drop_last=True,
-                             shuffle=True,
-                             collate_fn=tset.collate_fn)
+    tloader = DataLoader(tset,
+                         args.batch_per_gpu,
+                         num_workers=16,
+                         pin_memory=True,
+                         drop_last=True,
+                         shuffle=True,
+                         collate_fn=tset.collate_fn)
 
     vloader = DataLoader(vset,
                          args.batch_per_gpu,
@@ -88,14 +78,11 @@ def store_feats(llavaclip, args, vloader):
     """
     llavaclip.eval()
 
-    stime = time()
     with torch.inference_mode():
         pbar = tqdm(vloader, desc=f'Storing Features', ncols=150)
         cache_path = os.path.join(args.cache_dir, 'llava-clip', 'openimages', 'val')
         cnames = list(vloader.dataset.names.values())
         for sample in pbar:
-            if time() - stime > 60 * 9:  # 9 minutes
-                break
             im_names = [name.replace('\\', '/').split('/')[-1].split('.')[0] \
                         for name in sample['im_file']]
             sample['names'] = cnames
@@ -113,12 +100,12 @@ def store_feats(llavaclip, args, vloader):
             for iname, name in enumerate(im_names):
                 torch.save(llavaclipvecs[iname], os.path.join(cache_path, name + '.pth'))
 
-def main(rank, world_size, args):
+def main(args):
     """
         main function
     """
     set_seed(args.seed)
-    tloader, vloader, llavaclip = init_loaders_and_models(rank, world_size, args)
+    tloader, vloader, llavaclip = init_loaders_and_models(args)
 
     store_feats(llavaclip, args, tloader)
     store_feats(llavaclip, args, vloader)
@@ -130,16 +117,8 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--batch_per_gpu", type=int, default=16)
     parser.add_argument("--init_ckpt", type=str, default="ckpts/base.pth")
-    parser.add_argument("--disable_distributed", action='store_true')
     parser.add_argument('--cache_dir', type=str, default='cache/',
                         help="Cache where to cache the vectors for faster inference")
     g_args = parser.parse_args()
 
-    if not g_args.disable_distributed:
-        rank = int(os.environ["LOCAL_RANK"])
-        world_size = int(os.environ["WORLD_SIZE"])
-        torch.distributed.init_process_group(backend="nccl", rank=rank, world_size=world_size)
-        main(rank, world_size, g_args)
-        torch.distributed.destroy_process_group()
-    else:
-        main(0, 1, g_args)
+    main(g_args)
