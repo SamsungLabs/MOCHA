@@ -65,7 +65,7 @@ Put the script `OI_subset.py` in `data/openimages/OpenImages` in such a way that
 When running the code for the first time on the OpenImages dataset using LLaVa or CLIP as the teacher model, the necessary cache files will be automatically generated. 
 To ensure consistency with prior work, we use a subset of the OpenImages dataset. This subset can be extracted by executing the `OI_subset.py` script.
 
-#### 1b) [OPTIONAL] Compute PCA
+#### 1b) Compute PCA [Optional]
 
 After caching separately llava and clip features, these can be merged and compressed via PCA, as follows.
 
