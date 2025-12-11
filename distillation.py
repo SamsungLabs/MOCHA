@@ -20,13 +20,17 @@ from models import YoloFeats, ReconLoss, LlavaClipVecs, MochaFeatMap, YoloVecs, 
 from utils import clean_predictions, Metrics
 
 def set_seed(seed):
-    
+    """
+        sets the rng seeds for all libraries
+    """
     torch.manual_seed(seed)
     npr.seed(seed)
     random.seed(seed)
 
 def str2bool(s):
-    
+    """
+        string to bool
+    """
     s = s.lower()
     if s in ['1', 't', 'true']:
         return True
@@ -41,7 +45,9 @@ def clean_gradient(grad):
     return grad
 
 def init_loaders_and_models(rank, world_size, args):
-    
+    """
+        initialize stuff here, to reduce SAM cost
+    """
     tset = OpenImages(imgsz=672, augment=False)
     vset = OpenImages(imgsz=672, val=True)
 
@@ -78,14 +84,13 @@ def init_loaders_and_models(rank, world_size, args):
                     dataset=tset,
                     pool_mode='mean')
 
-    if args.init_ckpt != 'none':
-        odict = dict(yolo.state_dict()) # dict() needed to silence pylint bug
-        for k, v in torch.load(args.init_ckpt, map_location='cpu').items():
-            if k.replace('module.', '') in odict:
-                odict[k.replace('module.', '')] = v
-            else:
-                print('Ignoring key {%s}'%k.replace('module.', ''))
-        yolo.load_state_dict(odict)
+    odict = dict(yolo.state_dict()) # dict() needed to silence pylint bug
+    for k, v in torch.load(args.init_ckpt, map_location='cpu').items():
+        if k.replace('module.', '') in odict:
+            odict[k.replace('module.', '')] = v
+        else:
+            print('Ignoring key {%s}'%k.replace('module.', ''))
+    yolo.load_state_dict(odict)
     yolo.to("cuda")
     yolo.train()
     if not args.disable_distributed:
@@ -132,7 +137,9 @@ def init_loaders_and_models(rank, world_size, args):
     return tloader, vloader, yolo, llavaclip, fmap
 
 def init_losses_and_optim(args, fmap, yolo, tloader):
-    
+    """
+        init stuff here, to reduce SAM cost
+    """
     rec = ReconLoss()
     emb = EmbeddingLoss()
     det = yolo.module.init_criterion()
@@ -160,7 +167,9 @@ def init_losses_and_optim(args, fmap, yolo, tloader):
     return rec, emb, det, optim, scheduler
 
 def train_log(writer, l, lrec, lemb, it, optim, lod=None, box=None, cls=None, dfl=None):
-    
+    """
+        log stuff here to reduce sam cost
+    """
     writer.add_scalar('train/lr', optim.param_groups[0]['lr'], it)
 
     writer.add_scalar('train/ltot', l.item(), it)
@@ -179,7 +188,9 @@ def train_log(writer, l, lrec, lemb, it, optim, lod=None, box=None, cls=None, df
 
 def train_distill_epoch(tloader, e, args, rank, optim, yolo, llavaclip,
                         fmap, pca_mean, pca_comp, rec, emb, scheduler, writer, it):
-    
+    """
+        do stuff here to reduce SAM cost
+    """
     yolo.eval()
     llavaclip.eval()
     fmap.train()
@@ -235,7 +246,9 @@ def train_distill_epoch(tloader, e, args, rank, optim, yolo, llavaclip,
 
 def train_detection_epoch(tloader, e, args, rank, optim, yolo, llavaclip,
                           fmap, pca_mean, pca_comp, rec, emb, det, scheduler, writer, it):
-    
+    """
+        do stuff here to reduce SAM cost
+    """
     yolo.train()
     llavaclip.eval()
     fmap.train()
@@ -300,7 +313,9 @@ def train_detection_epoch(tloader, e, args, rank, optim, yolo, llavaclip,
 
 def eval_epoch(yolo, llavaclip, fmap, pca_mean, pca_comp,
                 args, vloader, e, rank, rec, emb, det, writer):
-    
+    """
+        do stuff here to reduce SAM cost
+    """
     yolo.eval()
     llavaclip.eval()
     fmap.eval()
@@ -369,7 +384,9 @@ def eval_epoch(yolo, llavaclip, fmap, pca_mean, pca_comp,
     return lkd, map50_95
 
 def main(rank, world_size, args):
-    
+    """
+        main function, as required by DDP
+    """
 
     # select the correct cuda device
     torch.cuda.set_device(rank)
@@ -461,7 +478,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_kd", type=str2bool, default=True)
     parser.add_argument('--debug', action='store_true')
     parser.add_argument("--logdir", type=str, default="logs/both")
-    parser.add_argument("--init_ckpt", type=str, default="none")
+    parser.add_argument("--init_ckpt", type=str, default="ckpts/base.pth")
     parser.add_argument("--disable_distributed", action='store_true')
     parser.add_argument('--cache_dir', type=str, default='cache/',
                         help="Cache where to cache the vectors for faster inference")
@@ -481,4 +498,3 @@ if __name__ == "__main__":
         main(int(os.environ["LOCAL_RANK"]), int(os.environ["WORLD_SIZE"]), g_args)
     else:
         main(0, 1, g_args)
-

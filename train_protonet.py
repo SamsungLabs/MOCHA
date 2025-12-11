@@ -19,6 +19,9 @@ warnings.simplefilter(action='ignore', category=UserWarning)
 warnings.simplefilter(action='ignore', category=ZeroDivisionError)
 
 def str2bool(s):
+    """
+        string to bool
+    """
     s = s.lower()
     if s in ['1', 't', 'true']:
         return True
@@ -27,6 +30,9 @@ def str2bool(s):
     raise ValueError(f"[{s}] cannot be parsed as boolean")
 
 def train_protonet(tloader, args, model, proto):
+    """
+        train protonet
+    """
     for sample in tloader:
         x = sample['img'] / 255.
         x = x.to(args.device, dtype=torch.float32)
@@ -57,18 +63,21 @@ def train_protonet(tloader, args, model, proto):
             vecs, _ = model(x, conf=.3, sample=ssample)
             if not args.disable_cache:
                 for iname, name in enumerate(im_names):
-                    torch.save(vecs[iname].cpu(), os.path.join(cache_path, name+'.pth'))
+                    torch.save(vecs[iname], os.path.join(cache_path, name+'.pth'))
         if args.pca_dim > 0 and args.model == "llava-clip":
             vecs = [[((v - args.pca_mean) @ args.pca_comp.T, p, c) for (v, p, c) in box] for box in vecs]
             if args.normalize_pca:
                 vecs = [[(model.normalize_pca_vec(v), p, c) for (v, p, c) in box] for box in vecs]
-        if args.invert_pca and args.pca_dim > 0 and args.model == "mocha":
+        #if args.invert_pca and args.pca_dim > 0 and args.model == "mocha":
             # args.pca_comp @ args.pca_comp.T = I --> args.pca_comp.T @ args.pca_comp ~= I
             # v' = (v-mu)P^T --> v'P ~= v-mu --> v'P + mu ~= v
             vecs = [[((v.to(x.device) @ args.pca_comp) + args.pca_mean, p, c) for (v, p, c) in box] for box in vecs]
         proto.train_protos(vecs, sample['cls'].int())
 
 def plot_image_and_gt_box(x, sample, vloader):
+    """
+        debug plots - image and gt box
+    """
     fig, ax = plt.subplots(1,1)
     ax.imshow(x[0].cpu().permute(1,2,0))
 
@@ -76,29 +85,32 @@ def plot_image_and_gt_box(x, sample, vloader):
     cx, cy, w, h = sample['bboxes'][0]
     x0, y0 = gw*(cx-w/2).item(), gh*(cy-h/2).item()
     x1 = gw*(cx+w/2).item()
-    ax.add_patch(Rectangle((x0, y0), w.item()*gw, h.item()*gh, fill=False, color='g', linewidth=6))
+    ax.add_patch(Rectangle((x0, y0), w.item()*gw, h.item()*gh, fill=False, color='g'))
     ax.text(x1, y0, vloader.dataset.names[str(sample['cls'][0].int().item())],
             verticalalignment='top', horizontalalignment='right',
-            bbox={'facecolor': 'g', 'edgecolor': 'g', 'pad': 0}, fontsize=24)
-    ax.set_axis_off()
+            bbox={'facecolor': 'g', 'edgecolor': 'g', 'pad': 0})
     return fig, ax
 
 def plot_predictions(box, ax, vloader):
-    confs = sorted([(conf.item(), i) for i, (_, _, _, _, conf, _) in enumerate(box)], reverse=True)
-    pidx = confs[0][1]
-    x0, y0, x1, y1, conf, cls = box[pidx].cpu()
-    if conf > .01:
-        ax.add_patch(Rectangle((x0, y0), x1-x0, y1-y0, fill=False, color='r', linewidth=6))
-        if cls.int().item() > 0:
-            ax.text(x0, y0, vloader.dataset.names[str(cls.int().item())],
-                    verticalalignment='top', horizontalalignment='left',
-                    bbox={'facecolor': 'r', 'edgecolor': 'r', 'pad': 0}, fontsize=24)
-        else:
-            ax.text(x0, y0, 'None',
-                    verticalalignment='top', horizontalalignment='left',
-                    bbox={'facecolor': 'r', 'edgecolor': 'r', 'pad': 0}, fontsize=24)
+    """
+        debug plots - predicted boxes
+    """
+    for x0, y0, x1, y1, conf, cls in box.cpu():
+        if conf > .01:
+            ax.add_patch(Rectangle((x0, y0), x1-x0, y1-y0, fill=False, color='r'))
+            if cls.int().item() > 0:
+                ax.text(x0, y0, vloader.dataset.names[str(cls.int().item())],
+                        verticalalignment='top', horizontalalignment='left',
+                        bbox={'facecolor': 'r', 'edgecolor': 'r', 'pad': 0})
+            else:
+                ax.text(x0, y0, 'None',
+                        verticalalignment='top', horizontalalignment='left',
+                        bbox={'facecolor': 'r', 'edgecolor': 'r', 'pad': 0})
 
 def eval_protonet(vloader, args, model, proto, metrics):
+    """
+        evaluate protonet
+    """
     acc = 0
     cts = 0
     for sid, sample in enumerate(vloader):
@@ -130,8 +142,8 @@ def eval_protonet(vloader, args, model, proto, metrics):
             vecs, preds = model(x, conf=0.001 if args.dataset in ['icub', 'core50'] else 0.1, sample=ssample)
             if not args.disable_cache:
                 for iname, name in enumerate(im_names):
-                    torch.save(vecs[iname].cpu(), os.path.join(cache_path, name+'_vec.pth'))
-                    torch.save(preds[iname].cpu(), os.path.join(cache_path, name+'_pred.pth'))
+                    torch.save(vecs[iname], os.path.join(cache_path, name+'_vec.pth'))
+                    torch.save(preds[iname], os.path.join(cache_path, name+'_pred.pth'))
         if args.pca_dim > 0 and args.model == "llava-clip":
             vecs = [[((v.to(x.device) - args.pca_mean) @ args.pca_comp.T, p, c) for (v, p, c) in box] for box in vecs]
             if args.normalize_pca:
@@ -145,10 +157,8 @@ def eval_protonet(vloader, args, model, proto, metrics):
         if args.debug or args.save_images:
             fig, ax = plot_image_and_gt_box(x, sample, vloader)
 
-        confs = sorted([(box[0][4].item() if len(box) > 0 else 0, i) for i, box in enumerate(preds)], reverse=True)
-        pidx = confs[0][1]
         for i, box in enumerate(preds):
-            if args.debug or args.save_images and i == pidx:
+            if args.debug or args.save_images:
                 plot_predictions(box, ax, vloader)
 
             # this also removes boxes that didn't get their label changed
@@ -162,11 +172,14 @@ def eval_protonet(vloader, args, model, proto, metrics):
             plt.show()
         if args.save_images:
             fig.tight_layout() # pylint: disable=all
-            fig.savefig('images_dump/%04d.png'%sid, bbox_inches='tight', transparent="True", pad_inches=0)
+            fig.savefig('images_dump/%04d.png'%sid)
             plt.close()
     return acc, cts
 
 def run_episode(args, tloader, vloader, model, proto, verbose=False):
+    """
+        run one episodic training and get the metrics
+    """
     max_vram = 0
 
     if args.save_images:
@@ -198,8 +211,7 @@ if __name__ == '__main__':
     # model-related arguments
     parser.add_argument('--model', default='mocha',
                         choices=['base', 'residual', 'dino', 'demo',
-                                 'llava', 'clip', 'llava-clip', 'mocha',
-                                 'vild', 'ofa'],
+                                 'llava', 'clip', 'llava-clip', 'mocha'],
                         help='Which model configuration to use')
     parser.add_argument('--pnet', default='cond',
                         choices=['cond', 'base', 'simple'],
