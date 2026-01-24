@@ -19,7 +19,7 @@ MOCHA recipe. (1) Pretraining student model. (2) Knowledge distillation on rich 
     pip install -r requirements.txt
     ```
 
-2. Download the evaluation datasets processed into YOLO format and place them in the `data` directory. If needed, modify the paths in `datasets/data_paths.yaml`. The datasets include:  
+2. Download the evaluation datasets processed into [YOLO format](https://docs.ultralytics.com/yolov5/tutorials/train_custom_data/#12-leverage-models-for-automated-labeling) and place them in the `data` directory, following this structure [here](https://drive.google.com/file/d/115Wj9u1Ny8CYdm09HjSVaFSpKTbux28-/view?usp=share_link). If needed, modify the paths in `datasets/data_paths.yaml`. The datasets include:  
       - [CORe50](https://zenodo.org/records/13254883)
       - [iCubWorld](https://zenodo.org/records/13254883)
       - [PerSeg](https://zenodo.org/records/13254883)
